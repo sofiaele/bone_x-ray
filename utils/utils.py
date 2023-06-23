@@ -1,12 +1,10 @@
-import numpy as np
 import cv2
 import pandas as pd
 import matplotlib.pyplot as plt
-from PIL import Image
-from pathlib import Path
 import imagesize
 import numpy as np
-from load_dataset import split_data
+import sys
+import math
 
 def caclulate_mean_std(dataframe):
     files = dataframe['path'].values.tolist()
@@ -74,4 +72,38 @@ def optimal_image_size():
     plt.legend(loc='upper right')
     plt.show()
 
-optimal_image_size()
+class EarlyStopper:
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.max_validation_f1 = 0.0
+
+    def early_stop(self, validation_f1):
+        if validation_f1 > self.max_validation_f1:
+            self.max_validation_f1 = validation_f1
+            self.counter = 0
+        elif validation_f1 < (self.max_validation_f1 + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
+
+def progress(loss, epoch, batch, batch_size, dataset_size):
+    """
+    Print the progress of the training for each epoch
+    """
+    batches = math.ceil(float(dataset_size) / batch_size)
+    count = batch * batch_size
+    bar_len = 40
+    filled_len = int(round(bar_len * count / float(dataset_size)))
+
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+
+    status = 'Epoch {}, Loss: {:.4f}'.format(epoch, loss)
+    _progress_str = "\r \r [{}] ...{}".format(bar, status)
+    sys.stdout.write(_progress_str)
+    sys.stdout.flush()
+
+    if batch == batches:
+        print()
