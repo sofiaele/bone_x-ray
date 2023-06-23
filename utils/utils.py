@@ -107,3 +107,10 @@ def progress(loss, epoch, batch, batch_size, dataset_size):
 
     if batch == batches:
         print()
+
+def delete_corrupted_images():
+    dataframe = pd.read_csv("train.csv")
+    df = dataframe[dataframe.path != 'MURA-v1.1/train/XR_SHOULDER/patient02455/study1_negative/image3.png']
+    df.to_csv("train.csv")
+
+delete_corrupted_images()
