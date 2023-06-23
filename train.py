@@ -13,9 +13,10 @@ from copy import deepcopy
 import math
 import time
 import pickle
+import argparse
 
-train_path = "utils/train.csv"
-val_path = "utils/valid.csv"
+#train_path = "utils/train.csv"
+#val_path = "utils/valid.csv"
 
 
 
@@ -212,4 +213,14 @@ def train(train_path, val_path):
     plt.show()
 
 if __name__ == '__main__':
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--train', required=True,
+                        type=str, nargs='+', help='Input train csv')
+    parser.add_argument('-v', '--validation', required=True,
+                        type=str, help='Input valid csv')
+    args = parser.parse_args()
+
+    # Get argument
+    train = args.train
+    validation = args.validation
+    train(train, validation)
