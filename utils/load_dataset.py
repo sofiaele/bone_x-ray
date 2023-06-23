@@ -6,7 +6,7 @@ import matplotlib.pylab as plt
 train_images_paths = "/Users/sofiaeleftheriou/datasets/MURA-v1.1/train_image_paths.csv"
 train_labels_path = "/Users/sofiaeleftheriou/datasets/MURA-v1.1/train_labeled_studies.csv"
 
-def load_data():
+def load_initial_data():
 
     data = pd.read_csv(train_images_paths, header=None)
     labels = pd.read_csv(train_labels_path, header=None)
@@ -99,7 +99,7 @@ def initial_labels_distribution(df):
     plt.xticks(range(len(labels_distribution_initial)), list(labels_distribution_initial.keys()))
     plt.savefig('initial_labels_distribution.png')
 
-def load_split_data(data_path):
+def split_data(data_path):
     df = pd.read_csv(data_path)
     splitter = GroupShuffleSplit(test_size=.20, n_splits=2, random_state=7)
     split = splitter.split(df, groups=df['id'])
@@ -112,6 +112,9 @@ def load_split_data(data_path):
     check_modality_distribution(train, test)
     check_labels_distribution(train, test)
     initial_labels_distribution(df)
+    train.to_csv("train.csv")
+    test.to_csv("valid.csv")
     return train, test
+
 
 

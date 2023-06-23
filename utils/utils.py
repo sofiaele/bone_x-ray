@@ -6,7 +6,7 @@ from PIL import Image
 from pathlib import Path
 import imagesize
 import numpy as np
-from load_dataset import load_split_data
+from load_dataset import split_data
 
 def caclulate_mean_std(dataframe):
     files = dataframe['path'].values.tolist()
@@ -40,7 +40,7 @@ def caclulate_mean_std(dataframe):
 data_path = "new_dataset.csv"
 def optimal_image_size():
     # Identify Image Resolutions
-    dataframe, _ = load_split_data(data_path)
+    dataframe = pd.read_csv("train.csv")
     # Get the Image Resolutions
     imgs = dataframe['path'].values.tolist()
     img_meta = {}
@@ -74,3 +74,4 @@ def optimal_image_size():
     plt.legend(loc='upper right')
     plt.show()
 
+optimal_image_size()

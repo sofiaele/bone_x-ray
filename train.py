@@ -1,19 +1,20 @@
 import matplotlib.pyplot as plt
 import torch
-from new_CNN import Net
+from CNN import Net
 from dataloading import CustomVisionDataset
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import pandas as pd
-from utils.load_dataset import load_split_data
 from utils.utils import caclulate_mean_std
 
 
 
 
-data_path = "new_dataset.csv"
-def train(data_path):
-    train, valid = load_split_data(data_path)
+train_path = "utils/train.csv"
+val_path = "utils/valid.csv"
+def train(train_path, val_path):
+    train = pd.read_csv(train_path)
+    valid = pd.read_csv(val_path)
 
     mean, std = caclulate_mean_std(train)
 
