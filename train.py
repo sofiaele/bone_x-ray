@@ -57,7 +57,7 @@ def train(train_path, val_path):
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            'min',
                                                            verbose=True)
-    early_stopper = EarlyStopper(patience=500, min_delta=1e-5)
+    early_stopper = EarlyStopper(patience=10, min_delta=1e-5)
 
     epochs = 50
 
@@ -211,3 +211,5 @@ def train(train_path, val_path):
 
     plt.show()
 
+if __name__ == '__main__':
+    train()
