@@ -60,7 +60,7 @@ def train(train_path, val_path):
                                                            verbose=True)
     early_stopper = EarlyStopper(patience=10, min_delta=1e-5)
 
-    epochs = 50
+    epochs = 2
 
     all_epochs = []
     val_loss = 0
@@ -215,12 +215,12 @@ def train(train_path, val_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--train', required=True,
-                        type=str, nargs='+', help='Input train csv')
+                        type=str, help='Input train csv')
     parser.add_argument('-v', '--validation', required=True,
                         type=str, help='Input valid csv')
     args = parser.parse_args()
 
     # Get argument
-    train = args.train
-    validation = args.validation
-    train(train, validation)
+    train_path = args.train
+    validation_path = args.validation
+    train(train_path, validation_path)
