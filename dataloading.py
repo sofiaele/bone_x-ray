@@ -4,8 +4,10 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.transforms import RandomResizedCrop, Compose, Normalize, ToTensor
-from PIL import Image
+from PIL import Image, ImageFile
 import os
+from numpy import asarray
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class CustomVisionDataset(Dataset):
@@ -21,6 +23,7 @@ class CustomVisionDataset(Dataset):
                 transforms.Resize((224, 224)),
                 #transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
+                #using mean and std calculated on train data
                 transforms.Normalize(mean, std)])
         else:
             self._transforms = transforms.Compose([
@@ -35,5 +38,11 @@ class CustomVisionDataset(Dataset):
         image_path = self.X[index]
         image = Image.open(os.path.join(image_path))
         image = image.convert('RGB')
+        pic = asarray(image)
+        # convert from integers to floats
+        pic = pic.astype('float32')
+        # normalize to the range 0-1
+        pic /= 255.0
+        image = Image.fromarray(pic.astype('uint8'))
         image = self._transforms(image)
         return image, self.y[index]

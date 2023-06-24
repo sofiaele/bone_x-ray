@@ -14,13 +14,15 @@ import math
 import time
 import pickle
 import argparse
+import optuna
 
 #train_path = "utils/train.csv"
 #val_path = "utils/valid.csv"
 
 
 
-def train(train_path, val_path):
+
+def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
     random.seed(0)
     torch.manual_seed(0)
     torch.cuda.manual_seed_all(0)
@@ -29,9 +31,11 @@ def train(train_path, val_path):
     train = pd.read_csv(train_path)
     valid = pd.read_csv(val_path)
 
-    mean, std = caclulate_mean_std(train)
-
-
+    #mean, std = caclulate_mean_std(train)
+    #print(mean, std)
+    # [0.20610136 0.20610136 0.20610136] [0.17719613 0.17719613 0.17719613]
+    mean =  [0.20610136, 0.20610136, 0.20610136]
+    std = [0.17719613, 0.17719613, 0.17719613]
     train_set = CustomVisionDataset(train, mean, std)
     eval_set = CustomVisionDataset(valid, mean, std)
 
@@ -39,7 +43,10 @@ def train(train_path, val_path):
     train_loader = DataLoader(train_set, batch_size=100, shuffle=True, drop_last=True, num_workers=4)
     val_loader = DataLoader(eval_set, batch_size=100, shuffle=True, drop_last=True, num_workers=4)
 
-    net = Net(224, 224, 3, 4, 2, 0.5)
+    if use_optuna:
+        net = model
+    else:
+        net = Net(224, 224, 4, 4, 2, 0.5)
 
     # use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -60,7 +67,7 @@ def train(train_path, val_path):
                                                            verbose=True)
     early_stopper = EarlyStopper(patience=10, min_delta=1e-5)
 
-    epochs = 2
+    epochs = 50
 
     all_epochs = []
     val_loss = 0
@@ -74,7 +81,8 @@ def train(train_path, val_path):
     comparison_metric_max = 0
     # Train CNN
     for epoch in range(1, epochs + 1):  # loop over the dataset multiple times
-        scheduler.step(epoch=epoch)
+        net.to(device)
+
         all_epochs.append(epoch)
         ############## Training ##############
         running_loss = 0.0
@@ -89,6 +97,7 @@ def train(train_path, val_path):
 
 
             inputs = inputs.to(device)
+
             labels = labels.to(device)
 
             optimizer.zero_grad()
@@ -106,9 +115,9 @@ def train(train_path, val_path):
             optimizer.step()
 
             # print statistics
-            running_loss += loss.item()
+            running_loss += loss.data.item()
             # print statistics
-            progress(loss=running_loss,
+            progress(loss=loss.data.item(),
                      epoch=epoch,
                      batch=i,
                      batch_size=train_loader.batch_size,
@@ -135,6 +144,7 @@ def train(train_path, val_path):
             pred_all = []
             actual_labels = []
             for j, val_data in enumerate(val_loader):
+                #print(j)
                 val_X, val_y = val_data
 
                 val_X = val_X.to(device)
@@ -143,15 +153,17 @@ def train(train_path, val_path):
                 outputs = net(val_X)
 
                 v_loss = loss_function(outputs, val_y)
-                val_loss += v_loss.item()
 
-                preds = outputs.data.max(1, keepdim=True)[1]
                 y_pred = np.argmax(outputs.detach().clone().to('cpu').numpy(), axis=1)
                 pred_all.append(y_pred)
 
                 labels_cpu = val_y.detach().clone().to('cpu').numpy()
                 actual_labels.append(labels_cpu)
-                correct += preds.eq(val_y.view_as(preds)).cpu().sum().item()
+
+                # Get accuracy
+                correct += sum([int(a == b)
+                                for a, b in zip(labels_cpu, y_pred)])
+
                 loss_aggregated += v_loss.item() * val_X.size(0)
             val_loss = loss_aggregated / (len(val_loader) * val_loader.batch_size)
             score = correct / len(val_loader.dataset)
@@ -170,21 +182,35 @@ def train(train_path, val_path):
             all_valid_loss.append(val_loss)
             all_metric_validation.append(score)
             all_valid_comparison_metric.append(comparison_metric)
-        if (best_model is None) or (comparison_metric > comparison_metric_max + 1e-5):
+        if use_optuna:
             comparison_metric_max = comparison_metric
             best_model = deepcopy(net).to('cpu')
             best_model_epoch = epoch
-        if epoch != 1:
-            if early_stopper.early_stop(comparison_metric):
-                print(f'\nResetting model to epoch {best_model_epoch}.')
-                break
+        else:
+            if (best_model is None) or (comparison_metric > comparison_metric_max + 1e-5):
+                comparison_metric_max = comparison_metric
+                best_model = deepcopy(net).to('cpu')
+                best_model_epoch = epoch
+        scheduler.step(val_loss)
+
+        if use_optuna:
+            # Add prune mechanism
+            trial.report(comparison_metric, epoch)
+
+            if trial.should_prune():
+                raise optuna.exceptions.TrialPruned()
+        else:
+            if epoch != 1:
+                if early_stopper.early_stop(comparison_metric):
+                    print(f'\nResetting model to epoch {best_model_epoch}.')
+                    break
 
         net.to('cpu')
         best_model = best_model.to(device)
     print('Finished Training')
     print('All validation accuracies: {} \n'.format(all_metric_validation))
     best_index = all_valid_comparison_metric.index(max(all_valid_comparison_metric))
-    print('Best index, best model epoch: ', best_index, best_model_epoch)
+
     best_model_acc = all_metric_validation[best_index]
     print('Best model\'s validation accuracy: {}'.format(best_model_acc))
     best_model_f1 = all_valid_comparison_metric[best_index]
@@ -205,12 +231,57 @@ def train(train_path, val_path):
     plt.title('Learning curves')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.xticks(all_epochs, rotation=90)
+    plt.xticks(all_epochs)
     plt.tight_layout()
 
     plt.savefig("losses.png")
 
     plt.show()
+    return best_model_f1
+
+def objective(trial, train_path, val_path):
+    global tuner
+    params = {
+        'conv_layers': trial.suggest_int("conv_layers", 1, 4),
+        'num_channels': trial.suggest_int("num_channels", 2, 8),
+        'dense_nodes': trial.suggest_int("num_channels", 1, 8),
+        'dropout': trial.suggest_loguniform('dropout', 1e-1, 9e-1)
+    }
+
+    model = Net(224, 224, params)
+
+    f1 = train_and_validate(train_path, val_path, params, model, trial, use_optuna=True)
+
+    return f1
+
+def callback(study, trial):
+    global best_booster
+    if study.best_trial == trial:
+        best_booster = tuner
+def optuna_tune(train_path, val_path):
+    study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(), pruner=optuna.pruners.MedianPruner())
+    # Wrap the objective inside a lambda and call objective inside it
+    func = lambda trial: objective(trial, train_path, val_path)
+    study.optimize(func, n_trials=30, callbacks=[callback])
+
+    timestamp = time.ctime()
+    timestamp = timestamp.replace(" ", "_")
+    ofile = f"{best_booster.__class__.__name__}_{timestamp}.pt"
+    print(f"\nSaving model to: {ofile}\n")
+    best_model = best_booster.to("cpu")
+    with open(ofile, "wb") as output_file:
+        pickle.dump(best_model, output_file)
+
+    best_trial = study.best_trial
+    print("Best trial:", best_trial)
+
+
+    for key, value in best_trial.params.items():
+        print("{}: {}".format(key, value))
+    optuna.visualization.plot_intermediate_values(study)
+    optuna.visualization.plot_optimization_history(study)
+    optuna.visualization.plot_param_importances(study)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -223,4 +294,4 @@ if __name__ == '__main__':
     # Get argument
     train_path = args.train
     validation_path = args.validation
-    train(train_path, validation_path)
+    optuna_tune(train_path, validation_path)

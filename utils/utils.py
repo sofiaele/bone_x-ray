@@ -5,7 +5,7 @@ import imagesize
 import numpy as np
 import sys
 import math
-
+from tqdm import tqdm
 def caclulate_mean_std(dataframe):
     files = dataframe['path'].values.tolist()
     mean = np.array([0., 0., 0.])
@@ -13,8 +13,8 @@ def caclulate_mean_std(dataframe):
     std = np.array([0., 0., 0.])
 
     numSamples = len(files)
-
-    for i in range(numSamples):
+    print("-> Loading train images to calculate mean...")
+    for i in tqdm(range(numSamples)):
         im = cv2.imread(str(files[i]))
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         im = im.astype(float) / 255.
@@ -23,8 +23,8 @@ def caclulate_mean_std(dataframe):
             mean[j] += np.mean(im[:, :, j])
 
     mean = (mean / numSamples)
-
-    for i in range(numSamples):
+    print("-> Loading train images to calculate std...")
+    for i in tqdm(range(numSamples)):
         im = cv2.imread(str(files[i]))
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         im = im.astype(float) / 255.
@@ -113,4 +113,3 @@ def delete_corrupted_images():
     df = dataframe[dataframe.path != 'MURA-v1.1/train/XR_SHOULDER/patient02455/study1_negative/image3.png']
     df.to_csv("train.csv")
 
-delete_corrupted_images()
