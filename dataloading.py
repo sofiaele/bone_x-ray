@@ -45,4 +45,4 @@ class CustomVisionDataset(Dataset):
         pic /= 255.0
         image = Image.fromarray(pic.astype('uint8'))
         image = self._transforms(image)
-        return image, self.y[index]
+        return image, self.y[index], image_path
