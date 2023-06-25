@@ -6,23 +6,54 @@ import numpy as np
 import sys
 import math
 from tqdm import tqdm
+from numpy import asarray
+from PIL import Image
 def caclulate_mean_std(dataframe):
     files = dataframe['path'].values.tolist()
-    mean = np.array([0., 0., 0.])
-    stdTemp = np.array([0., 0., 0.])
-    std = np.array([0., 0., 0.])
+    '''mean = np.array([0., 0., 0.])
+    stdTemp = np.array([0., 0., 0.])'''
+    means = []
+    stds = []
 
     numSamples = len(files)
     print("-> Loading train images to calculate mean...")
     for i in tqdm(range(numSamples)):
-        im = cv2.imread(str(files[i]))
+        '''im = cv2.imread(str(files[i]))
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         im = im.astype(float) / 255.
-
         for j in range(3):
-            mean[j] += np.mean(im[:, :, j])
+            mean[j] += np.mean(im[:, :, j])'''
 
-    mean = (mean / numSamples)
+        # load image
+        image = Image.open(str(files[i]))
+        pixels = np.array(image)/255.
+        # convert from integers to floats
+        #pixels = pixels.astype('float32')
+        # calculate per-channel means and standard deviations
+        means.append(np.mean(pixels))
+
+
+    mean = np.mean(means)
+    squared_diff_sum = 0
+    num_pixels = 0
+
+    # Calculate the squared difference from the mean
+    for i in tqdm(range(numSamples)):
+        image = Image.open(str(files[i]))
+        pixels = (np.array(image)/255.).flatten()
+        squared_diff_sum += np.sum((pixels - mean) ** 2)
+        num_pixels += pixels.size
+
+    # Calculate the variance
+    variance = squared_diff_sum / num_pixels
+
+    # Calculate the standard deviation
+    std = np.sqrt(variance)
+    print('Mean: %s, Std: %s' % (mean, std))
+
+
+    '''mean = (mean / numSamples)
+
     print("-> Loading train images to calculate std...")
     for i in tqdm(range(numSamples)):
         im = cv2.imread(str(files[i]))
@@ -31,11 +62,13 @@ def caclulate_mean_std(dataframe):
         for j in range(3):
             stdTemp[j] += ((im[:, :, j] - mean[j]) ** 2).sum() / (im.shape[0] * im.shape[1])
 
-    std = np.sqrt(stdTemp / numSamples)
+    std = np.sqrt(stdTemp / numSamples)'''
     return mean, std
 
 
-data_path = "new_dataset.csv"
+'''train = pd.read_csv("train.csv")
+mean, std = caclulate_mean_std(train)'''
+
 def optimal_image_size():
     # Identify Image Resolutions
     dataframe = pd.read_csv("train.csv")

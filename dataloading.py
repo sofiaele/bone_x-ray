@@ -11,10 +11,10 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class CustomVisionDataset(Dataset):
-    def __init__(self, dataframe, mean, std, mode=None):
+    def __init__(self, dataframe, mean, std, mode=None, image_type="RGB"):
         self.X = dataframe['path'].values.tolist()
         self.y = dataframe['label'].values.tolist()
-
+        self.image_type = image_type
 
         # -------------------------------------------------------------------------------
         # image transformations
@@ -37,7 +37,10 @@ class CustomVisionDataset(Dataset):
     def __getitem__(self, index):
         image_path = self.X[index]
         image = Image.open(os.path.join(image_path))
-        image = image.convert('RGB')
+        if self.image_type == "RGB":
+            image = image.convert('RGB')
+        else:
+            image = image.convert('L')
         pic = asarray(image)
         # convert from integers to floats
         pic = pic.astype('float32')

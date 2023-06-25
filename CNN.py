@@ -13,7 +13,7 @@ class Net(nn.Module):
         self.dense_nodes = params['dense_nodes']
         self.dropout = params['dropout']
         # Input 1 channel(b/c black and white) with 32 filters each with kernel_size=3 (3*3)
-        self.conv1 = nn.Conv2d(3, 8 * params['num_channels'], kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(1, 8 * params['num_channels'], kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(8 * params['num_channels'], 8 * params['num_channels'] * 2, kernel_size=3, stride=1, padding=1)
         self.conv3 = nn.Conv2d(8 * params['num_channels'] * 2, 8 * params['num_channels'] * 2 * 2, kernel_size=3, stride=1, padding=1)
         self.conv4 = nn.Conv2d(8 * params['num_channels'] * 2 * 2, 8 * params['num_channels'] * 2 * 2*2, kernel_size=3, stride=1, padding=1)

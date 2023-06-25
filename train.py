@@ -33,9 +33,9 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
 
     #mean, std = caclulate_mean_std(train)
     #print(mean, std)
-    # [0.20610136 0.20610136 0.20610136] [0.17719613 0.17719613 0.17719613]
-    mean =  [0.20610136, 0.20610136, 0.20610136]
-    std = [0.17719613, 0.17719613, 0.17719613]
+    #
+    mean = [0.20610136438155038]
+    std = [0.17367093735484107]
     train_set = CustomVisionDataset(train, mean, std)
     eval_set = CustomVisionDataset(valid, mean, std)
 
@@ -70,7 +70,6 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
     epochs = 50
 
     all_epochs = []
-    val_loss = 0
     all_train_loss, all_metric_training = [], []
     all_metric_training = []
     all_metric_validation = []
@@ -93,7 +92,7 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
         net.train()
         for i, data in enumerate(train_loader):
             # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = data
+            inputs, labels, _ = data
 
 
             inputs = inputs.to(device)
@@ -145,7 +144,7 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
             actual_labels = []
             for j, val_data in enumerate(val_loader):
                 #print(j)
-                val_X, val_y = val_data
+                val_X, val_y, _ = val_data
 
                 val_X = val_X.to(device)
                 val_y = val_y.to(device)
@@ -182,15 +181,12 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
             all_valid_loss.append(val_loss)
             all_metric_validation.append(score)
             all_valid_comparison_metric.append(comparison_metric)
-        if use_optuna:
+
+
+        if (best_model is None) or (comparison_metric > comparison_metric_max + 1e-5):
             comparison_metric_max = comparison_metric
             best_model = deepcopy(net).to('cpu')
             best_model_epoch = epoch
-        else:
-            if (best_model is None) or (comparison_metric > comparison_metric_max + 1e-5):
-                comparison_metric_max = comparison_metric
-                best_model = deepcopy(net).to('cpu')
-                best_model_epoch = epoch
         scheduler.step(val_loss)
 
         if use_optuna:
@@ -199,11 +195,11 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
 
             if trial.should_prune():
                 raise optuna.exceptions.TrialPruned()
-        else:
-            if epoch != 1:
-                if early_stopper.early_stop(comparison_metric):
-                    print(f'\nResetting model to epoch {best_model_epoch}.')
-                    break
+
+        if epoch != 1:
+            if early_stopper.early_stop(comparison_metric):
+                print(f'\nResetting model to epoch {best_model_epoch}.')
+                break
 
         net.to('cpu')
         best_model = best_model.to(device)
@@ -217,40 +213,42 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
     print('Best model\'s validation f1 score: {}'.format(best_model_f1))
     best_model_loss = all_valid_loss[best_index]
     print('Best model\'s validation loss: {}'.format(best_model_loss))
-    timestamp = time.ctime()
-    timestamp = timestamp.replace(" ", "_")
-    ofile = f"{best_model.__class__.__name__}_{best_model_epoch}_{timestamp}.pt"
-    print(f"\nSaving model to: {ofile}\n")
-    best_model = best_model.to("cpu")
-    with open(ofile, "wb") as output_file:
-        pickle.dump(best_model, output_file)
-    plt.figure(figsize=(16, 6))
-    plt.plot(all_epochs, all_train_loss, '-o', label='Training loss')
-    plt.plot(all_epochs, all_valid_loss, '-o', label='Validation loss')
-    plt.legend()
-    plt.title('Learning curves')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.xticks(all_epochs)
-    plt.tight_layout()
 
-    plt.savefig("losses.png")
+    if not(use_optuna):
+        timestamp = time.ctime()
+        timestamp = timestamp.replace(" ", "_")
+        ofile = f"{best_model.__class__.__name__}_{best_model_epoch}_{timestamp}.pt"
+        print(f"\nSaving model to: {ofile}\n")
+        best_model = best_model.to("cpu")
+        with open(ofile, "wb") as output_file:
+            pickle.dump(best_model, output_file)
+        plt.figure(figsize=(16, 6))
+        plt.plot(all_epochs, all_train_loss, '-o', label='Training loss')
+        plt.plot(all_epochs, all_valid_loss, '-o', label='Validation loss')
+        plt.legend()
+        plt.title('Learning curves')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.xticks(all_epochs)
+        plt.tight_layout()
 
-    plt.show()
+        plt.savefig("losses.png")
+
+        plt.show()
     return best_model_f1
 
 def objective(trial, train_path, val_path):
     global tuner
     params = {
         'conv_layers': trial.suggest_int("conv_layers", 1, 4),
-        'num_channels': trial.suggest_int("num_channels", 2, 8),
-        'dense_nodes': trial.suggest_int("num_channels", 1, 8),
-        'dropout': trial.suggest_loguniform('dropout', 1e-1, 9e-1)
+        'num_channels': trial.suggest_int("num_channels", 2, 4),
+        'dense_nodes': trial.suggest_int("dense_nodes", 1, 4),
+        'dropout': trial.suggest_uniform('dropout', 1e-1, 9e-1)
     }
 
     model = Net(224, 224, params)
 
-    f1 = train_and_validate(train_path, val_path, params, model, trial, use_optuna=True)
+    f1 = train_and_validate(train_path, val_path, model, trial, use_optuna=True)
 
     return f1
 
@@ -262,15 +260,15 @@ def optuna_tune(train_path, val_path):
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(), pruner=optuna.pruners.MedianPruner())
     # Wrap the objective inside a lambda and call objective inside it
     func = lambda trial: objective(trial, train_path, val_path)
-    study.optimize(func, n_trials=30, callbacks=[callback])
+    study.optimize(func, n_trials=1)
 
-    timestamp = time.ctime()
+    '''timestamp = time.ctime()
     timestamp = timestamp.replace(" ", "_")
     ofile = f"{best_booster.__class__.__name__}_{timestamp}.pt"
     print(f"\nSaving model to: {ofile}\n")
     best_model = best_booster.to("cpu")
     with open(ofile, "wb") as output_file:
-        pickle.dump(best_model, output_file)
+        pickle.dump(best_model, output_file)'''
 
     best_trial = study.best_trial
     print("Best trial:", best_trial)
