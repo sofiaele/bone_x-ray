@@ -5,11 +5,13 @@ import matplotlib.pylab as plt
 
 train_images_paths = "/Users/sofiaeleftheriou/datasets/MURA-v1.1/train_image_paths.csv"
 train_labels_path = "/Users/sofiaeleftheriou/datasets/MURA-v1.1/train_labeled_studies.csv"
+test_images_paths = "/Users/sofiaeleftheriou/datasets/MURA-v1.1/valid_image_paths.csv"
+test_labels_path = "/Users/sofiaeleftheriou/datasets/MURA-v1.1/valid_labeled_studies.csv"
 
-def load_initial_data():
+def load_initial_data(images_paths, labels_path, output_csv):
 
-    data = pd.read_csv(train_images_paths, header=None)
-    labels = pd.read_csv(train_labels_path, header=None)
+    data = pd.read_csv(images_paths, header=None)
+    labels = pd.read_csv(labels_path, header=None)
     final_x = []
     final_y = []
     ids = []
@@ -29,8 +31,9 @@ def load_initial_data():
 
     # Create DataFrame
     df = pd.DataFrame(data)
-    df.to_csv("new_dataset.csv", index=False)
+    df.to_csv(output_csv, index=False)
 
+load_initial_data(test_images_paths, test_labels_path, "test.csv")
 
 def check_modality_distribution(train, test):
     modalities_distribution_train = {"XR_ELBOW": 0, "XR_FINGER": 0, "XR_FOREARM": 0, "XR_HAND": 0,
