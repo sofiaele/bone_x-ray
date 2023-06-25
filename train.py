@@ -36,8 +36,8 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
     #
     mean = [0.20610136438155038]
     std = [0.17367093735484107]
-    train_set = CustomVisionDataset(train, mean, std)
-    eval_set = CustomVisionDataset(valid, mean, std)
+    train_set = CustomVisionDataset(train, mean, std, rgb=False)
+    eval_set = CustomVisionDataset(valid, mean, std, rgb=False)
 
 
     train_loader = DataLoader(train_set, batch_size=100, shuffle=True, drop_last=True, num_workers=4)
