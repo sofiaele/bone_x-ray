@@ -146,3 +146,9 @@ def delete_corrupted_images():
     df = dataframe[dataframe.path != 'MURA-v1.1/train/XR_SHOULDER/patient02455/study1_negative/image3.png']
     df.to_csv("train.csv")
 
+# Softmax function
+def softmax(x):
+    e_x = np.exp(x - np.max(x))  # Subtracting max value for numerical stability
+    return e_x / np.sum(e_x)
+
+
