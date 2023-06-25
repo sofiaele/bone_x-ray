@@ -76,18 +76,24 @@ def test(test_path, modelpath, aggregating_method='majority_vote'):
             final_preds.append(counter.most_common(1)[0][0])
         elif aggregating_method == 'average_probability':
             new_posteriors = []
-            print(posteriors)
             for image_posteriors in posteriors:
                 # Apply softmax to the array
                 softmax_array = softmax(image_posteriors)
                 new_posteriors.append(softmax_array)
-            print(np.array(new_posteriors))
             # Compute the element-wise mean along axis 0 (column-wise)
             mean_axis_0 = np.mean(np.array(new_posteriors), axis=0)
-            print(mean_axis_0)
-            print(np.argmax(mean_axis_0))
             final_preds.append(np.argmax(mean_axis_0))
-    #elif aggregating_method=='average_probability':
+        elif aggregating_method == 'pos_max':
+            new_posteriors = []
+            for image_posteriors in posteriors:
+                # Apply softmax to the array
+                softmax_array = softmax(image_posteriors)
+                new_posteriors.append(softmax_array[1])
+            max_pos_class = np.max(np.array(new_posteriors))
+            if max_pos_class > 0.5:
+                final_preds.append(1)
+            else:
+                final_preds.append(0)
 
 
 
@@ -96,4 +102,4 @@ def test(test_path, modelpath, aggregating_method='majority_vote'):
 
 
 
-test("utils/test.csv", "model.pt", "majority_vote")
+test("utils/test.csv", "model.pt", "pos_max")
