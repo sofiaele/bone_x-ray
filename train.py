@@ -22,7 +22,7 @@ import optuna
 
 
 
-def train_and_validate(train_path, val_path, model=None, trial=None, use_optuna=False):
+def train_and_validate(train_path, val_path, model=None, params=None, trial=None, use_optuna=False):
     random.seed(0)
     torch.manual_seed(0)
     torch.cuda.manual_seed_all(0)
@@ -64,9 +64,14 @@ def train_and_validate(train_path, val_path, model=None, trial=None, use_optuna=
     ##################################
     # TRAINING PIPELINE
     ##################################
-    optimizer = torch.optim.AdamW(params=net.parameters(),
-                                  lr=0.002,
-                                  weight_decay=.02)
+    if use_optuna:
+        optimizer = getattr(torch.optim, params['optimizer_name'])(net.parameters(), lr=params['lr'])
+    else:
+        optimizer = torch.optim.AdamW(params=net.parameters(),
+                                      lr=0.002,
+                                      weight_decay=.02)
+
+
     loss_function = torch.nn.CrossEntropyLoss()
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            'min',
@@ -247,14 +252,16 @@ def objective(trial, train_path, val_path):
     global tuner
     params = {
         'conv_layers': trial.suggest_int("conv_layers", 1, 4),
-        'num_channels': trial.suggest_int("num_channels", 2, 4),
-        'dense_nodes': trial.suggest_int("dense_nodes", 1, 4),
-        'dropout': trial.suggest_uniform('dropout', 1e-1, 9e-1)
+        'num_channels': trial.suggest_int("num_channels", 1, 4),
+        'dense_nodes': trial.suggest_int("dense_nodes", 1, 5),
+        'dropout': trial.suggest_uniform('dropout', 1e-1, 9e-1),
+        'optimizer_name': trial.suggest_categorical("optimizer_name", ["Adam", "RMSprop", "SGD"]),
+        'lr': trial.suggest_loguniform("lr", 1e-5, 1e-1)
     }
 
     model = Net(224, 224, params)
 
-    f1 = train_and_validate(train_path, val_path, model, trial, use_optuna=True)
+    f1 = train_and_validate(train_path, val_path, model, params, trial, use_optuna=True)
 
     return f1
 

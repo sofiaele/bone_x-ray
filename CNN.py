@@ -16,13 +16,16 @@ class Net(nn.Module):
         self.conv1 = nn.Conv2d(1, 8 * params['num_channels'], kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(8 * params['num_channels'], 8 * params['num_channels'] * 2, kernel_size=3, stride=1, padding=1)
         self.conv3 = nn.Conv2d(8 * params['num_channels'] * 2, 8 * params['num_channels'] * 2 * 2, kernel_size=3, stride=1, padding=1)
-        self.conv4 = nn.Conv2d(8 * params['num_channels'] * 2 * 2, 8 * params['num_channels'] * 2 * 2*2, kernel_size=3, stride=1, padding=1)
+        self.conv4 = nn.Conv2d(8 * params['num_channels'] * 2 * 2, 8 * params['num_channels'] * 2 * 2 * 2, kernel_size=3, stride=1, padding=1)
+        self.conv5 = nn.Conv2d(8 * params['num_channels'] * 2 * 2 * 2, 8 * params['num_channels'] * 2 * 2 * 2 * 2,
+                               kernel_size=3, stride=1, padding=1)
 
         # Normalize outputs
         self.batch_norm1 = nn.BatchNorm2d(8 * params['num_channels'])
         self.batch_norm2 = nn.BatchNorm2d(8 * params['num_channels'] * 2)
         self.batch_norm3 = nn.BatchNorm2d(8 * params['num_channels'] * 2 * 2)
         self.batch_norm4 = nn.BatchNorm2d(8 * params['num_channels'] * 2 * 2 * 2)
+        self.batch_norm5 = nn.BatchNorm2d(8 * params['num_channels'] * 2 * 2 * 2 * 2)
 
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -37,6 +40,10 @@ class Net(nn.Module):
           self.fc1 = nn.Linear(8 * params['num_channels'] * 2 * 2 * int(height/8) * int(width/8), 2**(params['dense_nodes']+4))
         if self.conv_layers > 3:
             self.fc1 = nn.Linear(8 * params['num_channels'] * 2 * 2 * 2 * int(height / 16) * int(width / 16), 2 ** (params['dense_nodes'] + 4))
+        if self.conv_layers > 4:
+            self.fc1 = nn.Linear(8 * params['num_channels'] * 2 * 2 * 2 * 2 * int(height / 32) * int(width / 32),
+                                 2 ** (params['dense_nodes'] + 4))
+
         self.fc2 = nn.Linear(2**(params['dense_nodes']+4), 2)
 
     def forward(self, x):
@@ -52,6 +59,9 @@ class Net(nn.Module):
             x = self.dropout(x)
         if self.conv_layers > 3:
             x = self.pool(F.relu(self.batch_norm4(self.conv4(x))))
+            x = self.dropout(x)
+        if self.conv_layers > 4:
+            x = self.pool(F.relu(self.batch_norm5(self.conv5(x))))
             x = self.dropout(x)
 
         x = x.view(x.size(0), -1)
