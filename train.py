@@ -22,7 +22,7 @@ import optuna
 
 
 
-def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
+def train_and_validate(train_path, val_path, model=None, trial=None, use_optuna=False):
     random.seed(0)
     torch.manual_seed(0)
     torch.cuda.manual_seed_all(0)
@@ -46,7 +46,13 @@ def train_and_validate(train_path, val_path, model, trial, use_optuna=False):
     if use_optuna:
         net = model
     else:
-        net = Net(224, 224, 4, 4, 2, 0.5)
+        params = {
+            'conv_layers': 2,
+            'num_channels': 3,
+            'dense_nodes': 2,
+            'dropout': 0.22023959319449948
+        }
+        net = Net(224, 224, params)
 
     # use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -287,9 +293,15 @@ if __name__ == '__main__':
                         type=str, help='Input train csv')
     parser.add_argument('-v', '--validation', required=True,
                         type=str, help='Input valid csv')
+    parser.add_argument('--optuna', required=False, action='store_true',
+                        help='use optuna tuner')
     args = parser.parse_args()
 
     # Get argument
     train_path = args.train
     validation_path = args.validation
-    optuna_tune(train_path, validation_path)
+    optuna = args.optuna
+    if optuna:
+        optuna_tune(train_path, validation_path)
+    else:
+        train_and_validate(train_path, validation_path, use_optuna=False)
