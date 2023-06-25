@@ -273,7 +273,7 @@ def optuna_tune(train_path, val_path):
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(), pruner=optuna.pruners.MedianPruner())
     # Wrap the objective inside a lambda and call objective inside it
     func = lambda trial: objective(trial, train_path, val_path)
-    study.optimize(func, n_trials=1)
+    study.optimize(func, n_trials=30)
 
     '''timestamp = time.ctime()
     timestamp = timestamp.replace(" ", "_")
@@ -307,8 +307,8 @@ if __name__ == '__main__':
     # Get argument
     train_path = args.train
     validation_path = args.validation
-    optuna = args.optuna
-    if optuna:
+    use_optuna = args.optuna
+    if use_optuna:
         optuna_tune(train_path, validation_path)
     else:
         train_and_validate(train_path, validation_path, use_optuna=False)
