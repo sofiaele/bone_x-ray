@@ -65,7 +65,7 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
 
     loss_function = torch.nn.CrossEntropyLoss()
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
-                                                           'min',
+                                                           'max',
                                                            verbose=True)
     #optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001, momentum=0.9)
 
@@ -78,6 +78,7 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
     all_metric_training = []
     all_metric_validation = []
     all_valid_comparison_metric = []
+    all_train_comparison_metric = []
     all_valid_loss = []
     best_model = None
     best_model_epoch = 0
@@ -94,6 +95,8 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
 
 
         net.train()
+        actual_labels = []
+        pred_all = []
         for i, data in enumerate(train_loader):
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels, _ = data
@@ -109,6 +112,10 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
             outputs = net(inputs)
             loss = loss_function(outputs, labels)
             labels_cpu = labels.detach().clone().to('cpu').numpy()
+            actual_labels.append(labels_cpu)
+
+            y_pred = np.argmax(outputs.detach().clone().to('cpu').numpy(), axis=1)
+            pred_all.append(y_pred)
             # Get accuracy
             correct_train += sum([int(a == b)
                             for a, b in zip(labels_cpu,
@@ -132,7 +139,10 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
                  batch_size=train_loader.batch_size,
                  dataset_size=len(train_loader.dataset))
         score = correct_train / len(train_loader.dataset) * 100
-
+        labels = [item for sublist in actual_labels for item in sublist]
+        preds = [item for sublist in pred_all for item in sublist]
+        comparison_metric = f1_score(labels, preds, average='macro')
+        all_train_comparison_metric.append(comparison_metric)
         # Store statistics for later usage
         all_train_loss.append(running_loss/len(train_loader))
         all_metric_training.append(score)
@@ -191,7 +201,7 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
             comparison_metric_max = comparison_metric
             best_model = deepcopy(net).to('cpu')
             best_model_epoch = epoch
-        scheduler.step(val_loss)
+        scheduler.step(comparison_metric)
 
         if use_optuna:
             # Add prune mechanism
@@ -238,7 +248,19 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
 
         plt.savefig("losses.png")
 
-        plt.show()
+
+        plt.clf()
+        plt.figure(figsize=(16, 6))
+        plt.plot(all_epochs, all_train_comparison_metric, '-o', label='Training f1')
+        plt.plot(all_epochs, all_valid_comparison_metric, '-o', label='Validation f1')
+        plt.legend()
+        plt.title('Learning curves')
+        plt.xlabel('Epoch')
+        plt.ylabel('F1 score')
+        plt.xticks(all_epochs)
+        plt.tight_layout()
+
+        plt.savefig("f1.png")
     return best_model_f1
 
 def objective(trial, train_path, val_path, mean, std):
