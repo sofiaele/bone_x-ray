@@ -21,7 +21,6 @@ class CustomVisionDataset(Dataset):
         if mode == 'test':
             self._transforms = transforms.Compose([
                 transforms.Resize((224, 224)),
-                #transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 #using mean and std calculated on train data
                 transforms.Normalize(mean, std)])
@@ -29,7 +28,10 @@ class CustomVisionDataset(Dataset):
             self._transforms = transforms.Compose([
                 transforms.RandomRotation(30),
                 transforms.Resize((224, 224)),
+                #transforms.RandomResizedCrop(224),
                 #transforms.RandomHorizontalFlip(),
+                #transforms.Resize(256),
+                #transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
     def __len__(self):

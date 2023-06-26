@@ -67,6 +67,8 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,
                                                            'min',
                                                            verbose=True)
+    #optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001, momentum=0.9)
+
     early_stopper = EarlyStopper(patience=10, min_delta=1e-5)
 
     epochs = 50
