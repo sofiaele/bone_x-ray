@@ -34,7 +34,7 @@ def vote(mode):
             
             header_row = ['Study', 'Votes', 'Prediction', 'Truth']
             value_rows = [[studies[i]] + values[i] for i in range(len(studies))]
-            print(value_rows)
+            #print(value_rows)
 
             
             with open('majority_voting.csv', 'w', newline='') as file:
