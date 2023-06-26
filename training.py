@@ -15,6 +15,8 @@ import time
 import pickle
 import argparse
 import optuna
+from torchvision import models
+
 
 #train_path = "utils/train.csv"
 #val_path = "utils/valid.csv"
@@ -22,7 +24,7 @@ import optuna
 
 
 
-def train_and_validate(train_path, val_path, model=None, params=None, trial=None, use_optuna=False):
+def train_and_validate(train_path, val_path, mean, std, net=None, params=None, trial=None, use_optuna=False, rgb=False):
     random.seed(0)
     torch.manual_seed(0)
     torch.cuda.manual_seed_all(0)
@@ -34,25 +36,14 @@ def train_and_validate(train_path, val_path, model=None, params=None, trial=None
     #mean, std = caclulate_mean_std(train)
     #print(mean, std)
     #
-    mean = [0.20610136438155038]
-    std = [0.17367093735484107]
-    train_set = CustomVisionDataset(train, mean, std, rgb=False)
-    eval_set = CustomVisionDataset(valid, mean, std, rgb=False)
+
+    train_set = CustomVisionDataset(train, mean, std, rgb=rgb)
+    eval_set = CustomVisionDataset(valid, mean, std, rgb=rgb)
 
 
     train_loader = DataLoader(train_set, batch_size=100, shuffle=True, drop_last=True, num_workers=4)
     val_loader = DataLoader(eval_set, batch_size=100, shuffle=True, drop_last=True, num_workers=4)
 
-    if use_optuna:
-        net = model
-    else:
-        params = {
-            'conv_layers': 2,
-            'num_channels': 3,
-            'dense_nodes': 2,
-            'dropout': 0.22023959319449948
-        }
-        net = Net(224, 224, params)
 
     # use GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -248,7 +239,7 @@ def train_and_validate(train_path, val_path, model=None, params=None, trial=None
         plt.show()
     return best_model_f1
 
-def objective(trial, train_path, val_path):
+def objective(trial, train_path, val_path, mean, std):
     global tuner
     params = {
         'conv_layers': trial.suggest_int("conv_layers", 1, 4),
@@ -261,18 +252,15 @@ def objective(trial, train_path, val_path):
 
     model = Net(224, 224, params)
 
-    f1 = train_and_validate(train_path, val_path, model, params, trial, use_optuna=True)
+    f1 = train_and_validate(train_path, val_path, mean, std, model, params, trial, use_optuna=True)
 
     return f1
 
-def callback(study, trial):
-    global best_booster
-    if study.best_trial == trial:
-        best_booster = tuner
-def optuna_tune(train_path, val_path):
+
+def optuna_tune(train_path, val_path, mean, std):
     study = optuna.create_study(direction="maximize", sampler=optuna.samplers.TPESampler(), pruner=optuna.pruners.MedianPruner())
     # Wrap the objective inside a lambda and call objective inside it
-    func = lambda trial: objective(trial, train_path, val_path)
+    func = lambda trial: objective(trial, train_path, val_path, mean, std)
     study.optimize(func, n_trials=30)
 
     '''timestamp = time.ctime()
@@ -293,22 +281,3 @@ def optuna_tune(train_path, val_path):
     optuna.visualization.plot_optimization_history(study)
     optuna.visualization.plot_param_importances(study)
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--train', required=True,
-                        type=str, help='Input train csv')
-    parser.add_argument('-v', '--validation', required=True,
-                        type=str, help='Input valid csv')
-    parser.add_argument('--optuna', required=False, action='store_true',
-                        help='use optuna tuner')
-    args = parser.parse_args()
-
-    # Get argument
-    train_path = args.train
-    validation_path = args.validation
-    use_optuna = args.optuna
-    if use_optuna:
-        optuna_tune(train_path, validation_path)
-    else:
-        train_and_validate(train_path, validation_path, use_optuna=False)

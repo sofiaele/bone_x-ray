@@ -59,47 +59,47 @@ def test(test_path, modelpath, aggregating_method='majority_vote'):
     grouped_preds = [[preds[index] for index in range(len(preds)) if samples_paths[index] == x] for x in values]
     grouped_y_true = [[y_true[index] for index in range(len(y_true)) if samples_paths[index] == x] for x in values]
     grouped_posteriors = [[posteriors[index] for index in range(len(posteriors)) if samples_paths[index] == x] for x in values]
-    #print(grouped_preds)
-    #print(grouped_y_true)
-    #print(grouped_posteriors)
-    final_true = []
-    final_preds = []
 
-    for y_true, preds, posteriors in zip(grouped_y_true, grouped_preds, grouped_posteriors):
-        # Count the occurrences of each decision
-        counter = Counter(y_true)
-        # Find the decision with the highest count
-        final_true.append(counter.most_common(1)[0][0])
-        if aggregating_method == 'majority_vote':
-            counter = Counter(preds)
+    if aggregating_method==None:
+        final_test_f1 = f1_score(y_true, preds, average='macro')
+    else:
+        final_true = []
+        final_preds = []
+
+        for y_true, preds, posteriors in zip(grouped_y_true, grouped_preds, grouped_posteriors):
+            # Count the occurrences of each decision
+            counter = Counter(y_true)
             # Find the decision with the highest count
-            final_preds.append(counter.most_common(1)[0][0])
-        elif aggregating_method == 'average_probability':
-            new_posteriors = []
-            for image_posteriors in posteriors:
-                # Apply softmax to the array
-                softmax_array = softmax(image_posteriors)
-                new_posteriors.append(softmax_array)
-            # Compute the element-wise mean along axis 0 (column-wise)
-            mean_axis_0 = np.mean(np.array(new_posteriors), axis=0)
-            final_preds.append(np.argmax(mean_axis_0))
-        elif aggregating_method == 'pos_max':
-            new_posteriors = []
-            for image_posteriors in posteriors:
-                # Apply softmax to the array
-                softmax_array = softmax(image_posteriors)
-                new_posteriors.append(softmax_array[1])
-            max_pos_class = np.max(np.array(new_posteriors))
-            if max_pos_class > 0.5:
-                final_preds.append(1)
-            else:
-                final_preds.append(0)
+            final_true.append(counter.most_common(1)[0][0])
+            if aggregating_method == 'majority_vote':
+                counter = Counter(preds)
+                # Find the decision with the highest count
+                final_preds.append(counter.most_common(1)[0][0])
+            elif aggregating_method == 'average_probability':
+                new_posteriors = []
+                for image_posteriors in posteriors:
+                    # Apply softmax to the array
+                    softmax_array = softmax(image_posteriors)
+                    new_posteriors.append(softmax_array)
+                # Compute the element-wise mean along axis 0 (column-wise)
+                mean_axis_0 = np.mean(np.array(new_posteriors), axis=0)
+                final_preds.append(np.argmax(mean_axis_0))
+            elif aggregating_method == 'pos_max':
+                new_posteriors = []
+                for image_posteriors in posteriors:
+                    # Apply softmax to the array
+                    softmax_array = softmax(image_posteriors)
+                    new_posteriors.append(softmax_array[1])
+                max_pos_class = np.max(np.array(new_posteriors))
+                if max_pos_class > 0.5:
+                    final_preds.append(1)
+                else:
+                    final_preds.append(0)
+        final_test_f1 = f1_score(final_true, final_preds, average='macro')
 
 
-
-    final_test_f1 = f1_score(final_true, final_preds, average='macro')
     print(final_test_f1)
 
 
 
-test("utils/test.csv", "model.pt", "pos_max")
+test("utils/test.csv", "model.pt", None)
