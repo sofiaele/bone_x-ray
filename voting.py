@@ -51,10 +51,7 @@ def vote(mode):
                 prediction_probs = (row[2]).strip('][').split(', ')
                 prediction_probs = [float(prediction_probs[0]), float(prediction_probs[1])]
                 
-                print(prediction_probs)
-                print(type(prediction_probs))
-                
-                truth = row[2]
+                truth = row[3]
 
                 path = row[1]
                 path = path.split('/')
@@ -68,9 +65,9 @@ def vote(mode):
             for study in votes:
 
                 if votes[study][0][0] >= votes[study][0][1]:
-                    votes[study] = [  [votes[study][0][0]/votes[study][3], votes[study][0][1]/votes[study][3] ] , 0, truth, votes[study][3] ]
+                    votes[study] = [  [votes[study][0][0]/votes[study][3], votes[study][0][1]/votes[study][3] ] , 0, votes[study][2], votes[study][3] ]
                 else:
-                    votes[study] = [  [votes[study][0][0]/votes[study][3], votes[study][0][1]/votes[study][3] ] , 1, truth, votes[study][3] ]
+                    votes[study] = [  [votes[study][0][0]/votes[study][3], votes[study][0][1]/votes[study][3] ] , 1, votes[study][2], votes[study][3] ]
 
         
         with open('soft_voting.csv', 'w', newline='') as file:
@@ -79,7 +76,6 @@ def vote(mode):
             studies = list(votes.keys())
             values = list(votes.values())
 
-            header_row = ['Study', 'Votes', 'Prediction', 'Truth']
             value_rows = [[studies[i]] + values[i] for i in range(len(studies))]
 
             writer = csv.writer(file)
