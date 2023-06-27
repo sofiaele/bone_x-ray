@@ -9,15 +9,19 @@ from utils.utils import softmax
 from sklearn.metrics import f1_score
 import argparse
 from sklearn.metrics import cohen_kappa_score
-def test(test_path, modelpath, aggregating_method='majority_vote'):
+def test(test_path, modelpath, aggregating_method='majority_vote', extremity_type=None):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # Restore model
     with open(modelpath, "rb") as input_file:
         model = pickle.load(input_file)
     model = model.to(device)
     test = pd.read_csv(test_path)
-    mean = [0.20610136438155038]
-    std = [0.17367093735484107]
+    print(test)
+    if extremity_type!=None:
+       test = test.loc[test['path'].str.contains(extremity_type)]
+    print(test)
+    mean =  [0.4998042153140976]
+    std = [0.29930012885944535]
     test_set = CustomVisionDataset(test, mean, std, mode="test", rgb=False)
     test_loader = DataLoader(test_set, batch_size=1, shuffle=True, drop_last=False)
 
@@ -106,7 +110,7 @@ def test(test_path, modelpath, aggregating_method='majority_vote'):
 
 
 
-test("utils/test.csv", "Net_4_Tue_Jun_27_00:37:11_2023.pt", 'average_probability')
+#test("utils/test.csv", "model2.pt", None)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
