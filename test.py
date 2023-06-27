@@ -7,7 +7,8 @@ from torch.utils.data import DataLoader
 from collections import Counter
 from utils.utils import softmax
 from sklearn.metrics import f1_score
-
+import argparse
+from sklearn.metrics import cohen_kappa_score
 def test(test_path, modelpath, aggregating_method='majority_vote'):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # Restore model
@@ -62,6 +63,7 @@ def test(test_path, modelpath, aggregating_method='majority_vote'):
 
     if aggregating_method==None:
         final_test_f1 = f1_score(y_true, preds, average='macro')
+        final_cohen_score = cohen_kappa_score(preds, y_true)
     else:
         final_true = []
         final_preds = []
@@ -96,10 +98,28 @@ def test(test_path, modelpath, aggregating_method='majority_vote'):
                 else:
                     final_preds.append(0)
         final_test_f1 = f1_score(final_true, final_preds, average='macro')
+        final_cohen_score = cohen_kappa_score(final_preds, final_true)
 
 
-    print(final_test_f1)
+    print("f1: ", final_test_f1)
+    print("Cohen score: ", final_cohen_score)
 
 
 
-test("utils/test.csv", "model.pt", None)
+test("utils/test.csv", "Net_4_Tue_Jun_27_00:37:11_2023.pt", 'average_probability')
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--test', required=True,
+                        type=str, help='Input test csv')
+    parser.add_argument('-m', '--model_path', required=True,
+                        type=str, help='model path')
+    parser.add_argument('--method', required=False, default=None,
+                        help='which method to aggregate')
+    args = parser.parse_args()
+
+    # Get argument
+    test_path = args.test
+    model_path = args.model_path
+    method = args.method
+    test(test_path, model_path, method)
