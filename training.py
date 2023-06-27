@@ -58,9 +58,12 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
     if use_optuna:
         optimizer = getattr(torch.optim, params['optimizer_name'])(net.parameters(), lr=params['lr'])
     else:
-        optimizer = torch.optim.AdamW(params=net.parameters(),
+        '''optimizer = torch.optim.AdamW(params=net.parameters(),
                                       lr=0.002,
-                                      weight_decay=.02)
+                                      weight_decay=.02)'''
+        '''optimizer = torch.optim.Adam(params=net.parameters(),
+                                     lr=0.0006)'''
+        optimizer = torch.optim.Adam(net.parameters(), lr=0.0006)
 
 
     loss_function = torch.nn.CrossEntropyLoss()
@@ -69,9 +72,9 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
                                                            verbose=True)
     #optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001, momentum=0.9)
 
-    early_stopper = EarlyStopper(patience=10, min_delta=1e-5)
+    early_stopper = EarlyStopper(patience=50, min_delta=1e-5)
 
-    epochs = 50
+    epochs = 300
 
     all_epochs = []
     all_train_loss, all_metric_training = [], []
@@ -248,8 +251,6 @@ def train_and_validate(train_path, val_path, mean, std, net=None, params=None, t
 
         plt.savefig("losses.png")
 
-
-        plt.clf()
         plt.figure(figsize=(16, 6))
         plt.plot(all_epochs, all_train_comparison_metric, '-o', label='Training f1')
         plt.plot(all_epochs, all_valid_comparison_metric, '-o', label='Validation f1')

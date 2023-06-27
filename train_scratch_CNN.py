@@ -10,10 +10,10 @@ def train_CNN(train_path, validation_path, use_optuna):
         params = {
             'conv_layers': 2,
             'num_channels': 3,
-            'dense_nodes': 2,
-            'dropout': 0.22023959319449948
+            'dense_nodes': 4,
+            'dropout': 0.216208726249828
         }
-        net = Net(224, 224, params)
+        net = Net(256, 256, params)
         train_and_validate(train_path, validation_path, mean, std, net=net, use_optuna=False)
 
 
